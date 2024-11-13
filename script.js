@@ -428,7 +428,11 @@ function clamp(value, min, max) {
   
   document.getElementById('generateBtn').addEventListener('click', () => {
     const hexInput = document.getElementById('hexInput').value;
-    const hexColors = hexInput.split(',').map(hex => hex.trim());
+    const hexColors = hexInput
+      .split(',')
+      .map(hex => hex.trim())
+      .filter(hex => hex !== ''); // Filter out empty strings
+  
     const totalColors = parseInt(document.getElementById('totalColors').value, 10);
     const harmony = document.getElementById('harmonySelect').value;
   
@@ -443,4 +447,5 @@ function clamp(value, min, max) {
       paletteContainer.appendChild(colorDiv);
     });
   });
+  
   
