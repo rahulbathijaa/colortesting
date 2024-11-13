@@ -323,63 +323,48 @@ function clamp(value, min, max) {
   }
   
   function generateRandomHarmoniousPalette(lockedColors, totalColors) {
-    const colors = [...lockedColors];
-    const colorsNeeded = totalColors - lockedColors.length;
+    let colors = [];
   
-    // Return early if no additional colors are needed
-    if (colorsNeeded <= 0) return colors.map(color => hslToHex(color.H, color.S, color.L));
-  
-    // Calculate average H, S, L from locked colors
-    const avgH = lockedColors.reduce((sum, c) => sum + c.H, 0) / lockedColors.length;
-    const avgS = lockedColors.reduce((sum, c) => sum + c.S, 0) / lockedColors.length;
-    const avgL = lockedColors.reduce((sum, c) => sum + c.L, 0) / lockedColors.length;
-  
-    let hStart, hueVariation, sRange, lRange;
-  
-    // Adjust parameters based on average lightness
-    if (avgL > 80 || avgL < 20) {
-      // For very light or very dark colors, generate vivid and contrasting colors
-      hStart = Math.random() * 360; // Start at a random hue
-      hueVariation = 360; // Full hue range for diversity
-  
-      sRange = [70, 100]; // High saturation for vivid colors
-      lRange = [40, 60];  // Medium lightness for contrast
-    } else {
-      // Regular behavior for average lightness
-      hStart = avgH;
-      const hCycles = Math.random() * 2 + 0.5; // Between 0.5 to 2.5 hue cycles
-      hueVariation = 360 * hCycles; // Total hue change
-  
-      // Controlled random variations around the average saturation and lightness
-      sRange = [
-        Math.max(0, avgS - Math.random() * 30),
-        Math.min(100, avgS + Math.random() * 30),
-      ].sort((a, b) => a - b);
-  
-      lRange = [
-        Math.max(0, avgL - Math.random() * 30),
-        Math.min(100, avgL + Math.random() * 30),
-      ].sort((a, b) => a - b);
-  
-      // Occasionally vary saturation significantly for unexpected combinations
-      if (Math.random() < 0.3) { // 30% chance
-        sRange = [0, 100]; // Full saturation range
-      }
+    // If there are locked colors, convert them to HSL and add to colors array
+    if (lockedColors && lockedColors.length > 0) {
+      colors = [...lockedColors];
     }
   
-    // Randomly select easing functions for H, S, and L
-    const easingFunctions = [
-      x => x, // Linear
-      x => x * x, // Quadratic ease-in
-      x => x * (2 - x), // Quadratic ease-out
-      x => x < 0.5 ? 2 * x * x : -1 + (4 - 2 * x) * x, // Quadratic ease-in-out
-      x => x ** 3, // Cubic ease-in
-      x => 1 - (1 - x) ** 3, // Cubic ease-out
-      x => x < 0.5 ? 4 * x ** 3 : 1 - ((-2 * x + 2) ** 3) / 2, // Cubic ease-in-out
-    ];
-    const hEasing = easingFunctions[Math.floor(Math.random() * easingFunctions.length)];
-    const sEasing = easingFunctions[Math.floor(Math.random() * easingFunctions.length)];
-    const lEasing = easingFunctions[Math.floor(Math.random() * easingFunctions.length)];
+    const colorsNeeded = totalColors - colors.length;
+  
+    // Return early if no additional colors are needed
+    if (colorsNeeded <= 0) {
+      return colors.map(color => hslToHex(color.H, color.S, color.L));
+    }
+  
+    // Randomize key parameters inspired by the Rampensau generator
+  
+    // Random starting hue between 0 and 360
+    const hStart = Math.random() * 360;
+  
+    // hStartCenter is set to 0.5 to center the hue changes
+    const hStartCenter = 0.5;
+  
+    // Random number of hue cycles between 0 and 1
+    const hCycles = Math.random();
+  
+    // Hue variation based on hCycles
+    const hueVariation = 360 * hCycles;
+  
+    // Saturation range is narrow to ensure vivid colors
+    const sMin = 90 + Math.random() * 5; // Between 90% and 95%
+    const sMax = 95 + Math.random() * 5; // Between 95% and 100%
+    const sRange = [sMin, sMax].map(s => clamp(s, 0, 100));
+  
+    // Lightness range is wide to cover from very dark to very light
+    const lMin = 20 + Math.random() * 10;  // Between 5% and 15%
+    const lMax = 85 + Math.random() * 10; // Between 85% and 95%
+    const lRange = [lMin, lMax].map(l => clamp(l, 0, 100));
+  
+    // Easing functions
+    const hEasing = x => x; // Linear for hue
+    const sEasing = x => x < 0.5 ? 4 * x ** 3 : 1 - ((-2 * x + 2) ** 3) / 2; // Cubic ease-in-out
+    const lEasing = x => -(Math.cos(Math.PI * x) - 1) / 2; // Cosine easing
   
     // Generate new colors
     for (let i = 0; i < colorsNeeded; i++) {
@@ -391,8 +376,8 @@ function clamp(value, min, max) {
       const easedS = sEasing(t);
       const easedL = lEasing(t);
   
-      // Calculate hue with cycles and ensure it stays within 0-360°
-      const H = (hStart + hueVariation * easedH) % 360;
+      // Calculate hue
+      const H = (hStart + hueVariation * (easedH - hStartCenter)) % 360;
   
       // Interpolate saturation and lightness within their ranges
       const S = sRange[0] + (sRange[1] - sRange[0]) * easedS;
@@ -406,8 +391,12 @@ function clamp(value, min, max) {
     return colors.slice(0, totalColors).map(color => hslToHex(color.H, color.S, color.L));
   }
   
+  // Helper function to clamp values between min and max
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
   
-  
+
   
   function generatePalette(lockedHexColors, totalColors, harmony) {
     const lockedHSLColors = lockedHexColors.map(hex => hexToHSL(hex));
