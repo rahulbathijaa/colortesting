@@ -54,278 +54,11 @@ function hexToHSL(hex) {
     const avgL = lockedColors.reduce((sum, c) => sum + c.L, 0) / lockedColors.length;
     return { H: avgH, S: avgS, L: avgL };
   }
-  
-  function generateMonochromaticPalette(lockedHexColors, totalColors) {
-    const lockedHSLColors = lockedHexColors.map(hex => hexToHSL(hex));
     
-    // Calculate base hue, saturation, and lightness
-    const baseColor = lockedHSLColors.length === 1 
-      ? lockedHSLColors[0] 
-      : averageHSL(lockedHSLColors);
-  
-    const colors = [...lockedHSLColors];
-    const colorsNeeded = totalColors - lockedHSLColors.length;
-  
-    if (colorsNeeded <= 0) {
-      // Return early if no additional colors are needed
-      return colors.map(color => hslToHex(color.H, color.S, color.L));
-    }
-  
-    // Use easing functions to create smooth variations
-    const easingFunctions = [
-      x => x, // Linear
-      x => x * x, // Ease-in
-      x => x * (2 - x), // Ease-out
-      x => x < 0.5 ? 2 * x * x : -1 + (4 - 2 * x) * x, // Ease-in-out
-    ];
-    const sEasing = easingFunctions[Math.floor(Math.random() * easingFunctions.length)];
-    const lEasing = easingFunctions[Math.floor(Math.random() * easingFunctions.length)];
-    const hEasing = easingFunctions[Math.floor(Math.random() * easingFunctions.length)];
-  
-    // Define variation ranges
-    const sVariation = 30; // Up to ±30% saturation variation
-    const lVariation = 30; // Up to ±30% lightness variation
-    const hVariation = 10; // Up to ±10° hue variation for uniqueness
-  
-    for (let i = 1; i <= colorsNeeded; i++) {
-      const t = colorsNeeded > 1 ? i / (colorsNeeded + 1) : 0.5; // Normalize t between 0 and 1
-  
-      // Apply easing functions
-      const easedS = sEasing(t);
-      const easedL = lEasing(t);
-      const easedH = hEasing(t);
-  
-      // Adjust saturation and lightness with variation
-      const S = clamp(
-        baseColor.S * (1 - sVariation / 100 * (1 - easedS)),
-        0,
-        100
-      );
-      const L = clamp(
-        baseColor.L * (1 + lVariation / 100 * (easedL - 0.5) * 2),
-        0,
-        100
-      );
-  
-      // Introduce slight hue variation for uniqueness
-      const H = (baseColor.H + hVariation * (easedH - 0.5) * 2 + 360) % 360;
-  
-      colors.push({ H, S, L });
-    }
-  
-    // Ensure we have exactly totalColors by slicing if necessary
-    return colors.slice(0, totalColors).map(color => hslToHex(color.H, color.S, color.L));
-  }
-  
-  // Helper function to clamp values between min and max
-  function clamp(value, min, max) {
-    return Math.min(Math.max(value, min), max);
-  }
-  
-  
-function generateAnalogousPalette(lockedHexColors, totalColors) {
-  const lockedHSLColors = lockedHexColors.map(hex => hexToHSL(hex));
-  
-  // Calculate base hue, saturation, and lightness
-  const baseColor = lockedHSLColors.length === 1 
-    ? lockedHSLColors[0] 
-    : averageHSL(lockedHSLColors);
-
-  const colors = [...lockedHSLColors];
-  const colorsNeeded = totalColors - lockedHSLColors.length;
-
-  if (colorsNeeded <= 0) {
-    // Return early if no additional colors are needed
-    return colors.map(color => hslToHex(color.H, color.S, color.L));
-  }
-
-  const angleOffset = 30; // Total angle to cover for analogous colors
-  const totalSteps = Math.max(colorsNeeded, 2); // Ensure at least 2 steps
-  const halfSteps = Math.ceil(totalSteps / 2);
-
-  // Use easing functions to vary saturation and lightness
-  const easingFunctions = [
-    x => x, // Linear
-    x => x * x, // Ease-in
-    x => x * (2 - x), // Ease-out
-    x => x < 0.5 ? 2 * x * x : -1 + (4 - 2 * x) * x, // Ease-in-out
-  ];
-  const sEasing = easingFunctions[Math.floor(Math.random() * easingFunctions.length)];
-  const lEasing = easingFunctions[Math.floor(Math.random() * easingFunctions.length)];
-
-  // Define variation ranges
-  const sVariation = 20; // Up to ±20% saturation variation
-  const lVariation = 20; // Up to ±20% lightness variation
-
-  for (let i = 1; i <= halfSteps; i++) {
-    const t = halfSteps > 1 ? i / (halfSteps + 1) : 0.5; // Normalize t between 0 and 1
-
-    // Calculate hue offsets
-    const offset = (angleOffset / halfSteps) * i;
-    const hues = [
-      (baseColor.H + offset) % 360,
-      (baseColor.H - offset + 360) % 360,
-    ];
-
-    // Apply easing functions
-    const easedS = sEasing(t);
-    const easedL = lEasing(t);
-
-    hues.forEach(hue => {
-      if (colors.length < totalColors) {
-        // Adjust saturation and lightness with variation
-        const S = clamp(
-          baseColor.S * (1 - sVariation / 100 * (1 - easedS)),
-          0,
-          100
-        );
-        const L = clamp(
-          baseColor.L * (1 + lVariation / 100 * (easedL - 0.5) * 2),
-          0,
-          100
-        );
-
-        colors.push({ H: hue, S, L });
-      }
-    });
-  }
-
-  // If still not enough colors, generate additional colors using random harmonious logic
-  while (colors.length < totalColors) {
-    // Generate a random hue within the analogous range
-    const randomOffset = (Math.random() * angleOffset * 2 - angleOffset);
-    const H = (baseColor.H + randomOffset + 360) % 360;
-
-    // Randomly adjust saturation and lightness
-    const S = clamp(baseColor.S + (Math.random() * sVariation * 2 - sVariation), 0, 100);
-    const L = clamp(baseColor.L + (Math.random() * lVariation * 2 - lVariation), 0, 100);
-
-    colors.push({ H, S, L });
-  }
-
-  // Ensure we have exactly totalColors by slicing if necessary
-  return colors.slice(0, totalColors).map(color => hslToHex(color.H, color.S, color.L));
-}
-
-// Helper function to clamp values between min and max
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-  
-  function generateComplementaryPalette(lockedColor, totalColors) {
-    const colors = [lockedColor];
-    const complementaryHue = (lockedColor.H + 180) % 360;
-    const variations = Math.floor((totalColors - 1) / 2);
-  
-    for (let i = 1; i <= variations; i++) {
-      const factor = i / (variations + 1);
-      colors.push({
-        H: lockedColor.H,
-        S: lockedColor.S * (1 - factor * 0.5),
-        L: lockedColor.L * (1 + factor * 0.5),
-      });
-      colors.push({
-        H: complementaryHue,
-        S: lockedColor.S * (1 - factor * 0.5),
-        L: lockedColor.L * (1 + factor * 0.5),
-      });
-    }
-  
-    return colors.slice(0, totalColors).map(color => hslToHex(color.H, color.S, color.L));
-  }
-  
-  function generateSplitComplementaryPalette(lockedColor, totalColors) {
-    const colors = [lockedColor];
-    const hues = [
-      (lockedColor.H + 150) % 360,
-      (lockedColor.H + 210) % 360,
-    ];
-    const variations = Math.ceil((totalColors - 1) / hues.length);
-    hues.forEach(hue => {
-      for (let i = 1; i <= variations; i++) {
-        const factor = i / (variations + 1);
-        colors.push({
-          H: hue,
-          S: lockedColor.S * (1 - factor * 0.3),
-          L: lockedColor.L * (1 + factor * 0.3),
-        });
-        if (colors.length >= totalColors) break;
-      }
-    });
-    return colors.slice(0, totalColors).map(color => hslToHex(color.H, color.S, color.L));
-  }
-  
-  function generateTriadicPalette(lockedColor, totalColors) {
-    const colors = [lockedColor];
-    const hues = [
-      (lockedColor.H + 120) % 360,
-      (lockedColor.H + 240) % 360,
-    ];
-    const variations = Math.ceil((totalColors - 1) / hues.length);
-    hues.forEach(hue => {
-      for (let i = 1; i <= variations; i++) {
-        const factor = i / (variations + 1);
-        colors.push({
-          H: hue,
-          S: lockedColor.S * (1 - factor * 0.3),
-          L: lockedColor.L * (1 + factor * 0.3),
-        });
-        if (colors.length >= totalColors) break;
-      }
-    });
-    return colors.slice(0, totalColors).map(color => hslToHex(color.H, color.S, color.L));
-  }
-  
-  function generateSquarePalette(lockedColor, totalColors) {
-    const colors = [lockedColor];
-    const hues = [
-      lockedColor.H,
-      (lockedColor.H + 90) % 360,
-      (lockedColor.H + 180) % 360,
-      (lockedColor.H + 270) % 360,
-    ];
-    const variations = Math.ceil((totalColors - 1) / hues.length);
-    hues.forEach(hue => {
-      for (let i = 1; i <= variations; i++) {
-        const factor = i / (variations + 1);
-        colors.push({
-          H: hue,
-          S: lockedColor.S * (1 - factor * 0.2),
-          L: lockedColor.L * (1 + factor * 0.2),
-        });
-        if (colors.length >= totalColors) break;
-      }
-    });
-    return colors.slice(0, totalColors).map(color => hslToHex(color.H, color.S, color.L));
-  }
-  
-  function generateTetradicPalette(lockedColor, totalColors) {
-    const colors = [lockedColor];
-    const hues = [
-      (lockedColor.H + 60) % 360,
-      (lockedColor.H + 180) % 360,
-      (lockedColor.H + 240) % 360,
-    ];
-    const variations = Math.ceil((totalColors - 1) / hues.length);
-    hues.forEach(hue => {
-      for (let i = 1; i <= variations; i++) {
-        const factor = i / (variations + 1);
-        colors.push({
-          H: hue,
-          S: lockedColor.S * (1 - factor * 0.2),
-          L: lockedColor.L * (1 + factor * 0.2),
-        });
-        if (colors.length >= totalColors) break;
-      }
-    });
-    return colors.slice(0, totalColors).map(color => hslToHex(color.H, color.S, color.L));
-  }
-  
   function generateRandomHarmoniousPalette(lockedColors, totalColors) {
     let colors = [];
   
-    // If there are locked colors, convert them to HSL and add to colors array
+    // If there are locked colors, add them to the colors array
     if (lockedColors && lockedColors.length > 0) {
       colors = [...lockedColors];
     }
@@ -336,8 +69,6 @@ function clamp(value, min, max) {
     if (colorsNeeded <= 0) {
       return colors.map(color => hslToHex(color.H, color.S, color.L));
     }
-  
-    // Randomize key parameters inspired by the Rampensau generator
   
     // Random starting hue between 0 and 360
     const hStart = Math.random() * 360;
@@ -356,10 +87,10 @@ function clamp(value, min, max) {
     const sMax = 95 + Math.random() * 5; // Between 95% and 100%
     const sRange = [sMin, sMax].map(s => clamp(s, 0, 100));
   
-    // Lightness range is wide to cover from very dark to very light
-    const lMin = 20 + Math.random() * 10;  // Between 5% and 15%
-    const lMax = 85 + Math.random() * 10; // Between 85% and 95%
-    const lRange = [lMin, lMax].map(l => clamp(l, 0, 100));
+    // Lightness range adjusted to prevent multiple whites
+    const lMin = 20 + Math.random() * 10;  // Between 20% and 30%
+    const lMax = 90; // Set maximum lightness to 90% to avoid multiple whites
+    const lRange = [lMin, lMax];
   
     // Easing functions
     const hEasing = x => x; // Linear for hue
@@ -377,14 +108,34 @@ function clamp(value, min, max) {
       const easedL = lEasing(t);
   
       // Calculate hue
-      const H = (hStart + hueVariation * (easedH - hStartCenter)) % 360;
+      const H = (hStart + hueVariation * (easedH - hStartCenter) + 360) % 360;
   
       // Interpolate saturation and lightness within their ranges
       const S = sRange[0] + (sRange[1] - sRange[0]) * easedS;
-      const L = lRange[0] + (lRange[1] - lRange[0]) * easedL;
+      let L = lRange[0] + (lRange[1] - lRange[0]) * easedL;
   
-      // Add the generated color to the palette
+      // Clamp lightness to prevent it from exceeding lMax
+      L = clamp(L, lMin, lMax);
+  
       colors.push({ H, S, L });
+    }
+  
+    // Post-process to ensure only one color is very light (L >= 90%)
+    const whiteThreshold = 90; // Lightness threshold for "white" colors
+    const whiteColors = colors.filter(color => color.L >= whiteThreshold);
+  
+    if (whiteColors.length > 1) {
+      // Sort colors by lightness in descending order
+      colors.sort((a, b) => b.L - a.L);
+  
+      // Keep the lightest color as is and adjust others
+      for (let i = 1; i < colors.length; i++) {
+        if (colors[i].L >= whiteThreshold) {
+          colors[i].L = whiteThreshold - 5; // Reduce lightness to avoid being "white"
+        } else {
+          break; // No more white colors
+        }
+      }
     }
   
     // Convert HSL to HEX and return the final palette
@@ -405,20 +156,6 @@ function clamp(value, min, max) {
       : averageHSL(lockedHSLColors);
   
     switch (harmony) {
-      case 'monochromatic':
-        return generateMonochromaticPalette(lockedHexColors, totalColors);
-      case 'analogous':
-        return generateAnalogousPalette(baseColor, totalColors);
-      case 'complementary':
-        return generateComplementaryPalette(baseColor, totalColors);
-      case 'splitComplementary':
-        return generateSplitComplementaryPalette(baseColor, totalColors);
-      case 'triadic':
-        return generateTriadicPalette(baseColor, totalColors);
-      case 'square':
-        return generateSquarePalette(baseColor, totalColors);
-      case 'tetradic':
-        return generateTetradicPalette(baseColor, totalColors);
       case 'random':
         return generateRandomHarmoniousPalette(lockedHSLColors, totalColors);
       default:
